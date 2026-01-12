@@ -7,6 +7,7 @@ import S4 from "../assets/s4.png";
 
 const thumbnails = [S1, S2, S3, S4];
 
+// Card floating animation
 const cardIdle = {
   animate: {
     y: [0, -6, 0],
@@ -18,14 +19,14 @@ const cardIdle = {
   },
 };
 
+// Animated section (NO whileInView → mobile safe)
 function AnimatedSection({ children, id }) {
   return (
     <motion.section
       id={id}
-      className="scroll-mt-24 w-full px-4 sm:px-6 lg:px-8 py-16 font-inter"
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.25 }}
+      className="scroll-mt-24 w-full min-h-[1px] px-4 sm:px-6 lg:px-8 py-16 font-inter"
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       style={{
         background: "linear-gradient(180deg, #1D3FFF 0%, #040C82 100%)",
@@ -129,9 +130,7 @@ export default function PremiumCourses() {
   return (
     <AnimatedSection id="courses">
       <div className="max-w-7xl mx-auto text-center text-white">
-        <h2 className="text-3xl font-bold mb-4">
-          Our Premium Courses
-        </h2>
+        <h2 className="text-3xl font-bold mb-4">Our Premium Courses</h2>
 
         <p className="text-sm max-w-3xl mx-auto mb-12 opacity-90">
           Industry-designed programs with hands-on projects and career support.
@@ -153,7 +152,9 @@ export default function PremiumCourses() {
               <div
                 className="relative h-44 bg-cover bg-center flex items-center justify-center"
                 style={{
-                  backgroundImage: `url(${thumbnails[index % thumbnails.length]})`,
+                  backgroundImage: `url(${
+                    thumbnails[index % thumbnails.length]
+                  })`,
                 }}
               >
                 <div className="absolute inset-0 bg-black/35" />
@@ -180,9 +181,7 @@ export default function PremiumCourses() {
                   <span>{course.students}</span>
                 </div>
 
-                <p className="text-sm font-semibold mb-2">
-                  Course Modules:
-                </p>
+                <p className="text-sm font-semibold mb-2">Course Modules:</p>
 
                 <ul className="text-xs text-gray-500 mb-5 space-y-1">
                   {course.modules.map((m, i) => (
@@ -210,7 +209,6 @@ export default function PremiumCourses() {
           ))}
         </div>
 
-        {/* Explore All Courses */}
         <div className="mt-14">
           <button
             onClick={() => {

@@ -5,6 +5,9 @@ import EnrollCourse from "./pages/enrollPage";
 import AllWorkshops from "./pages/allWorkshops"; 
 import ContactUs from "./pages/contactUs";   // ✅ fixed path
 import AllImages from "./pages/allImages";
+import StudentPortal from "./components/StudentPortal";
+import HelpCenter from "./components/HelpCenter";
+import TermsOfService from "./pages/terms-of-service";
 
 
 
@@ -19,9 +22,12 @@ function App() {
         <Route path="/workshops" element={<AllWorkshops />} />
         <Route path="/contactus" element={<ContactUs />} />
         <Route path="/allimages" element={<AllImages />} />
+        <Route path="/student-portal" element={<StudentPortal />} />
+        <Route path="/help-center" element={<HelpCenter />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+
+
         
-
-
        
 
 
