@@ -17,14 +17,14 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/courses" element={<AllCourses />} />
+        {/* <Route path="/courses" element={<AllCourses />} />
         <Route path="/enroll" element={<EnrollCourse />} />
         <Route path="/workshops" element={<AllWorkshops />} />
         <Route path="/contactus" element={<ContactUs />} />
         <Route path="/allimages" element={<AllImages />} />
         <Route path="/student-portal" element={<StudentPortal />} />
         <Route path="/help-center" element={<HelpCenter />} />
-        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} /> */}
 
 
         
