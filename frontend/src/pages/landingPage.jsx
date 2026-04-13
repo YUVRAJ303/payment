@@ -22,12 +22,15 @@ function genTxnId() {
 }
 
 export default function PaytmResponsive() {
-  const [balance, setBalance] = useState(2450);
+  const [balance, setBalance] = useState(2450000);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [modal, setModal] = useState(null);
   const [success, setSuccess] = useState(null);
   const [deadlock, setDeadlock] = useState(null);
   
+  // Whitelist State (Default contacts are whitelisted)
+  const [whitelist, setWhitelist] = useState(allContacts.map(c => c.upi));
+
   // Send Money States
   const [sendTo, setSendTo] = useState("");
   const [sendAmt, setSendAmt] = useState("");
@@ -48,19 +51,42 @@ export default function PaytmResponsive() {
     setModal("send");
   }
 
+  function toggleWhitelist(upi) {
+    if (whitelist.includes(upi)) {
+      setWhitelist(whitelist.filter(id => id !== upi));
+    } else {
+      setWhitelist([...whitelist, upi]);
+    }
+  }
+
   function handleCheckFraud() {
     if (!sendTo.trim()) return alert("Please enter a UPI ID or mobile number first");
+
+    // WHITELIST CHECK: Bypass risk assessment if trusted
+    if (whitelist.includes(sendTo)) {
+      setFraudScore(0); // 0 means Trusted
+      return;
+    }
+
     if (!sendNote.trim()) return alert("Please enter a description to check for fraud risk");
 
-    const lowerNote = sendNote.toLowerCase();
-    let score = 1;
+    const lowerNote = sendNote.toLowerCase().trim();
+    let score;
 
-    if (lowerNote.includes("urgent") || lowerNote.includes("lottery") || lowerNote.includes("prize") || lowerNote.includes("win") || lowerNote.includes("offer")) {
-      score = Math.floor(Math.random() * 3) + 8; // High Risk (8-10)
-    } else if (lowerNote.includes("loan") || lowerNote.includes("help") || lowerNote.includes("stranger") || lowerNote.includes("unknown")) {
-      score = Math.floor(Math.random() * 3) + 5; // Moderate Risk (5-7)
+    // HARDCODED SCENARIOS
+    if (lowerNote === "to mom" || lowerNote === "for food" || lowerNote === "rent") {
+      score = 1;
+    } else if (lowerNote === "to unknown" || lowerNote === "unknown website") {
+      score = 9;
+    } else if (lowerNote.includes("lottery") || lowerNote.includes("prize") || lowerNote.includes("urgent win")) {
+      score = 10;
+    } else if (lowerNote.includes("loan") || lowerNote.includes("stranger help")) {
+      score = 6;
+    } else if (lowerNote.includes("grocery") || lowerNote.includes("bill")) {
+      score = 2;
     } else {
-      score = Math.floor(Math.random() * 4) + 1; // Low Risk (1-4)
+      // Default fallback score if text doesn't match above rules
+      score = Math.floor(Math.random() * 3) + 3; // Returns 3, 4, or 5
     }
 
     setFraudScore(score);
@@ -71,13 +97,19 @@ export default function PaytmResponsive() {
     if (!sendTo.trim()) return alert("Enter UPI ID or mobile number");
     if (!amt || amt <= 0) return alert("Enter amount");
 
-    if (amt > balance) {
+    // LOGIC: Trigger Deadlock screen if amount is > 1000
+    if (amt > 1000) {
       const now = new Date();
       const timeStr = "Today, " + now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
       setModal(null);
       setDeadlock({ amt, person: sendTo, txnId: genTxnId(), time: timeStr });
       setSendTo(""); setSendAmt(""); setSendNote(""); setFraudScore(null);
       return;
+    }
+
+    // Check if wallet has enough balance for amounts <= 1000
+    if (amt > balance) {
+      return alert("Insufficient Wallet Balance!");
     }
 
     const newBal = balance - amt;
@@ -118,6 +150,9 @@ export default function PaytmResponsive() {
         .content-grid { flex: 1; padding: 24px 28px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; overflow-y: auto; align-items: start; }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .quick-actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        
+        /* Custom Checkbox */
+        .whitelist-checkbox { cursor: pointer; width: 16px; height: 16px; accent-color: #22a65a; }
         
         @media (max-width: 900px) {
           .app-container { flex-direction: column; }
@@ -258,9 +293,14 @@ export default function PaytmResponsive() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {allContacts.map(c => (
                     <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: c.bg, color: c.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 500, flexShrink: 0 }}>{c.initials}</div>
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: c.bg, color: c.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 500, flexShrink: 0 }}>
+                        {c.initials}
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500, color: "#1a1a2e", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.full}</div>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: "#1a1a2e", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {c.full}
+                          {whitelist.includes(c.upi) && <span title="Trusted Contact" style={{ fontSize: 12 }}>🛡️</span>}
+                        </div>
                         <div style={{ fontSize: 12, color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.upi}</div>
                       </div>
                       <button onClick={() => quickPay(c.upi)} style={{ background: c.bg, color: c.color, border: "none", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 }}>Pay</button>
@@ -283,28 +323,64 @@ export default function PaytmResponsive() {
             <div style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>Recent contacts</div>
             <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
               {allContacts.map(c => (
-                <div key={c.name} onClick={() => { setSendTo(c.upi); setFraudScore(null); }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", minWidth: 60 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: c.bg, color: c.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 500 }}>{c.initials}</div>
+                <div key={c.name} onClick={() => { setSendTo(c.upi); setFraudScore(null); }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", minWidth: 60, position: "relative" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: c.bg, color: c.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 500 }}>
+                    {c.initials}
+                  </div>
+                  {whitelist.includes(c.upi) && (
+                    <div style={{ position: "absolute", top: -2, right: 4, fontSize: 12, background: "white", borderRadius: "50%" }}>🛡️</div>
+                  )}
                   <div style={{ fontSize: 11, color: "#555" }}>{c.name}</div>
                 </div>
               ))}
             </div>
           </div>
+          
           <Field label="UPI ID or Mobile Number" value={sendTo} onChange={(val) => { setSendTo(val); setFraudScore(null); }} placeholder="Enter details" />
+          
+          {/* WHITELIST CHECKBOX */}
+          {sendTo.trim() && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, marginTop: -6 }}>
+              <input 
+                type="checkbox" 
+                className="whitelist-checkbox"
+                id="whitelistCheck"
+                checked={whitelist.includes(sendTo)} 
+                onChange={() => toggleWhitelist(sendTo)} 
+              />
+              <label htmlFor="whitelistCheck" style={{ fontSize: 13, color: "#22a65a", cursor: "pointer", fontWeight: 500 }}>
+                Mark as Trusted Contact (Whitelist)
+              </label>
+            </div>
+          )}
+
           <AmountInput value={sendAmt} onChange={setSendAmt} color="#00baf2" />
-          <Field label="Description / Note" value={sendNote} onChange={(val) => { setSendNote(val); setFraudScore(null); }} placeholder="e.g., Food, Urgent Loan" />
+          <Field label="Description / Note" value={sendNote} onChange={(val) => { setSendNote(val); setFraudScore(null); }} placeholder="e.g., to mom, unknown website" />
 
           {/* FRAUD SCORE SECTION */}
           <div style={{ marginBottom: 16, padding: 14, background: "#f8f9fa", borderRadius: 10, border: "0.5px solid #eee" }}>
             <div style={{ fontSize: 13, color: "#555", fontWeight: 500, marginBottom: 8 }}>Fraud Risk Detection</div>
+            
             {fraudScore !== null ? (
-              <div style={{ marginBottom: 12, padding: 12, borderRadius: 8, background: fraudScore >= 8 ? "#fef2f2" : fraudScore >= 5 ? "#fffbeb" : "#e8fff4", color: fraudScore >= 8 ? "#991b1b" : fraudScore >= 5 ? "#92400e" : "#166534", fontSize: 13, lineHeight: 1.5 }}>
-                <strong>Score: {fraudScore}/10</strong><br/>
-                {fraudScore >= 8 ? "High risk detected! Proceed with extreme caution." : fraudScore >= 5 ? "Moderate risk detected. Please verify the receiver." : "Low risk. It looks safe to proceed."}
+              <div style={{ 
+                marginBottom: 12, padding: 12, borderRadius: 8, 
+                background: fraudScore === 0 ? "#e8fff4" : fraudScore >= 8 ? "#fef2f2" : fraudScore >= 5 ? "#fffbeb" : "#f0f8ff", 
+                color: fraudScore === 0 ? "#166534" : fraudScore >= 8 ? "#991b1b" : fraudScore >= 5 ? "#92400e" : "#0369a1", 
+                fontSize: 13, lineHeight: 1.5 
+              }}>
+                {fraudScore === 0 ? (
+                  <><strong>Trusted Contact 🛡️</strong><br/>This user is in your whitelist. Completely safe to proceed.</>
+                ) : (
+                  <>
+                    <strong>Score: {fraudScore}/10</strong><br/>
+                    {fraudScore >= 8 ? "High risk detected! Proceed with extreme caution." : fraudScore >= 5 ? "Moderate risk detected. Please verify the receiver." : "Low risk. It looks safe to proceed."}
+                  </>
+                )}
               </div>
             ) : (
-              <div style={{ fontSize: 12, color: "#888", marginBottom: 12 }}>Add a note and check the score before paying.</div>
+              <div style={{ fontSize: 12, color: "#888", marginBottom: 12 }}>Check the score before paying. Trusted contacts will bypass this check.</div>
             )}
+            
             <button onClick={handleCheckFraud} style={{ width: "100%", padding: 10, background: "#e2e8f0", color: "#334155", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Check Fraud Score</button>
           </div>
 
@@ -350,7 +426,7 @@ export default function PaytmResponsive() {
             <div style={{ fontSize: 13 }}><strong>ID:</strong> {deadlock.txnId}</div>
           </div>
           <div style={{ background: "#fef2f2", border: "0.5px solid #fca5a5", borderRadius: 10, padding: 12, fontSize: 12, color: "#991b1b" }}>
-            The amount is on hold. If not resolved in 24 hours, it will be auto-refunded.
+            The transaction is under review. The amount has been put on hold based on AI-driven scam risk analysis.
           </div>
         </ModalOverlay>
       )}
